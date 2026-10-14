@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-14
+
 ### Added
 
 - GE Appliances (GE, GE Profile, Café, Monogram, Haier US, Hotpoint) in Gladys through the SmartHQ
@@ -30,3 +32,6 @@ the notes of the version's GitHub Release.
 - Scene triggers "GE cycle finished" and "GE appliance alert", scene action "Pause or stop a GE
   dishwasher", dashboard widget "GE appliances" (what runs, time left).
 - Documentation in English, French, German and Spanish.
+
+[Unreleased]: https://github.com/guim31/gladys-smarthq/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-smarthq/releases/tag/v1.0.1
