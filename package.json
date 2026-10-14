@@ -1,8 +1,8 @@
 {
-  "name": "gladys-integration-template-js",
+  "name": "gladys-smarthq",
   "version": "1.0.0",
   "private": true,
-  "description": "Official starter template to build an external integration for Gladys Assistant with the JavaScript SDK.",
+  "description": "Gladys Assistant integration for GE Appliances (SmartHQ): washers, dryers, dishwashers, ovens, refrigerators, air conditioners.",
   "type": "module",
   "main": "index.js",
   "scripts": {

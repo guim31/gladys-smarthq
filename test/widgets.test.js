@@ -1,77 +1,72 @@
+// The dashboard widget: what is running, the busiest first, within the core budget.
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateWidgetContent } from '@gladysassistant/integration-sdk';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { buildDiscoveredDevices } from '../src/devices/index.js';
-import { simulateLanSession } from '../src/devices/plug.js';
-import { DEMO_STATUS_WIDGET, WIDGETS, refreshWidgets } from '../src/widgets.js';
-import { normalizeConfig } from '../src/config.js';
+import { formatMinutes } from '../src/widgets.js';
+import { idOf } from './helpers/fake-smarthq.js';
+import { createWorld, waitFor } from './helpers/world.js';
 
-const gladys = createFakeGladys();
-const config = normalizeConfig();
-const demoStatus = WIDGETS[DEMO_STATUS_WIDGET];
+const content = async (world, language = 'fr') => {
+  const ack = await world.gladys.fake.widgetGet('running_appliances', { settings: {}, language });
+  assert.equal(ack.success, true, JSON.stringify(ack));
+  assert.deepEqual(validateWidgetContent(ack.data.content), []);
+  return ack.data.content;
+};
 
-// What the SDK passes to onWidgetGet, plus the config index.js adds.
-const getContent = (cfg = config) =>
-  demoStatus.get(gladys, { settings: {}, language: 'en', units: 'metric', config: cfg });
-
-test('the demo_status content is rendered exactly as sent', async () => {
-  // [] = nothing the core would drop, truncate or trim to the content budget.
-  assert.deepEqual(validateWidgetContent(await getContent()), []);
+test('times read as people say them', () => {
+  assert.equal(formatMinutes(42), '42 min');
+  assert.equal(formatMinutes(65), '1 h 05');
 });
 
-test('the degraded plug connection content is valid too', async () => {
-  simulateLanSession(false);
+test('the widget lists what runs, the busiest first, with the time left', async () => {
+  const world = await createWorld();
   try {
-    const content = await getContent();
-    assert.deepEqual(validateWidgetContent(content), []);
-    const status = content.components.find((component) => component.type === 'status');
-    assert.ok(
-      status.items.some((item) => item.color === 'warning'),
-      'degraded shows a warning',
+    const { components } = await content(world);
+    assert.equal(components[0].text, '4 en marche');
+    const list = components.find((component) => component.type === 'card-list');
+    assert.deepEqual(
+      list.items.map((item) => [item.title, item.badge.text]),
+      [
+        ['Wall oven', '45 min'],
+        ['Washer', '45 min'],
+        ['Dishwasher', '52 min'],
+        ['Range', 'Préchauffage'],
+        ['Dryer', 'Terminé'],
+      ],
     );
+    assert.match(list.items[2].subtitle, /^AutoSense · Lavage principal · fin à \d\d:\d\d$/);
+    const english = await content(world, 'en');
+    assert.equal(english.components[0].text, '4 running');
   } finally {
-    simulateLanSession(true);
+    await world.close();
   }
 });
 
-test('the live tiles reference features the integration publishes', async () => {
-  const featureIds = new Set(
-    buildDiscoveredDevices(gladys, config).flatMap((device) =>
-      device.features.map((feature) => feature.external_id),
-    ),
-  );
-  const liveTiles = (await getContent()).components.filter((c) => c.device_feature);
-  assert.ok(liveTiles.length > 0, 'the template demonstrates a device-bound tile');
-  for (const tile of liveTiles) {
-    assert.ok(featureIds.has(tile.device_feature), `unknown feature ${tile.device_feature}`);
-  }
-});
-
-test('every button action of the content is handled and answers a short toast', async () => {
-  const buttons = (await getContent()).components.filter((c) => c.type === 'button' && c.action);
-  assert.ok(buttons.length > 0, 'the template demonstrates a widget action');
-  for (const { action } of buttons) {
-    const message = await demoStatus.action(gladys, {
-      actionKey: action.key,
-      params: action.params ?? {},
-      settings: {},
-      config,
+test('nothing running: one line says so; nothing added: one line says how', async () => {
+  const world = await createWorld({ addAll: false });
+  try {
+    assert.match((await content(world)).components[0].text, /onglet Découverte/);
+    await world.gladys.fake.deviceCreated(world.device('fridge'));
+    assert.equal(
+      (await content(world)).components[0].text,
+      'Aucun appareil en marche pour le moment.',
+    );
+    await world.gladys.fake.deviceCreated(world.device('washer'));
+    world.smarthq.change(idOf('washer'), '0x2000', '00');
+    await waitFor(async () => (await content(world)).components[0].text.startsWith('Aucun'), {
+      label: 'idle',
     });
-    assert.ok(message.en, 'the toast carries at least the mandatory `en` text');
-    assert.ok(message.en.length <= 200, 'toasts are capped at 200 characters');
+  } finally {
+    await world.close();
   }
 });
 
-test('an unknown widget action fails, so the user sees the error', async () => {
-  await assert.rejects(
-    demoStatus.action(gladys, { actionKey: 'unknown', params: {}, settings: {}, config }),
-    /Unknown widget action/,
-  );
-});
-
-test('refreshWidgets nudges every widget', () => {
-  const fresh = createFakeGladys();
-  refreshWidgets(fresh);
-  assert.deepEqual(fresh.fake.widgetRefreshes, Object.keys(WIDGETS));
+test('without credentials, the widget says what to fill in', async () => {
+  const world = await createWorld({ config: {}, waitDevices: false });
+  try {
+    assert.match((await content(world, 'en')).components[0].text, /e-mail and password/);
+  } finally {
+    await world.close();
+  }
 });

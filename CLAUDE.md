@@ -31,16 +31,28 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+index.js                          SDK client + createApp + connect(): no logic
+src/app.js                        every Gladys handler, wired on the hub (tests run it end to end)
+src/hub.js                        live picture: socket, own full read, states, badges, triggers
+src/appliances.js                 families, features, states and command checks, per ERD
+src/erd.js                        ERD codes (gehomesdk) and hex decoders
+src/laundry-cycles.js             washer/dryer cycle names (gehomesdk's ErdLaundryCycle)
+src/scenes.js                     scene action handlers (manifest `scene_actions`), trigger keys
+src/widgets.js                    dashboard widget "GE appliances" (manifest `widgets`)
+src/i18n.js                       every text, in en / fr / de / es
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+src/issues.js                     repeated failures logged once, recovery once
+src/command-error.js              a refused command, with its four-language message
+src/ge/constants.js               SmartHQ URLs, OAuth2 client of the app, timings
+src/ge/login.js                   HTML sign-in walk, verification code, token requests
+src/ge/client.js                  tokens (refresh first, password second), WebSocket address
+src/ge/token-store.js             refresh token in /data/smarthq-auth.json (mode 600)
+src/ge/socket.js                  the SmartHQ WebSocket ("pseudo-MQTT"): list, full read, writes
+scripts/probe.mjs                 real cloud probe, read only, for a machine with network
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, SDK fake Gladys + a fake SmartHQ (test/helpers/)
+test/fixtures/smarthq/            one appliance per file, ERD values built to gehomesdk's layouts
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +82,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** is in four languages (English, French, German with
+  "du", Spanish with "usted"): action messages, manifest texts, feature names,
+  widget, and `docs/en.md` / `fr.md` / `de.md` / `es.md`, with the same
+  sections. `test/i18n.test.js` enforces it.
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +247,58 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## GE Appliances (SmartHQ) : l'API et ses pièges (14/10/2026)
+
+Développée sans appareil ni compte, et **sans réseau vers GE** : le proxy de la session refuse
+`accounts.brillion.geappliances.com` (CONNECT 403). Le protocole vient de gehomesdk (`simbaja/gehome`,
+MIT) et de l'intégration Home Assistant `ha_gehome` (MIT). **Aucune capture réelle publiée** : les
+fixtures `test/fixtures/smarthq/` sont construites à la main sur les formats des convertisseurs de
+gehomesdk (README des fixtures). `scripts/probe.mjs --dump` sort les vraies valeurs d'un compte, à
+reprendre en fixtures.
+
+- **Connexion** : OAuth2 « code » de l'application SmartHQ (client_id/secret publiés par gehomesdk), en
+  parcourant les pages HTML de `accounts.brillion.geappliances.com` : cookie de région `abgea_region`,
+  formulaire `frmsignin` (+ `_csrf`), redirections manuelles jusqu'à un `Location` portant `code=`, puis
+  `POST /oauth2/token` en Basic. Pages rencontrées : autorisation de l'appli (`authorized` → `yes`),
+  incitation à ajouter un second facteur (passée, formulaire `addMfaForm`), **code de vérification**
+  (`verifyOptionForm` : envoi par `sendtotp` puis `sendtotp/process`, saisie par `totpcode/process`),
+  **nouvelles conditions** (`/oauth2/terms/accept` : gehomesdk les accepte d'office ; ici jamais, l'état
+  le dit). Un mauvais code réaffiche la page en 200.
+- **Mot de passe refusé = plus aucun essai** jusqu'à un changement de configuration (risque de blocage
+  du compte). Le code de vérification n'est envoyé que sur l'action de l'utilisateur.
+- **Jeton de rafraîchissement** dans `/data/smarthq-auth.json`, lié à l'empreinte e-mail + région :
+  un redémarrage ne repasse ni par le mot de passe ni par le code. Refusé (révoqué) → mot de passe.
+- **WebSocket** : `GET https://api.brillion.geappliances.com/v1/websocket` (Bearer) → `{ endpoint,
+userId }`. L'adresse porte un identifiant : jamais dans les journaux. Messages : `websocket#subscribe`
+  sur `/appliance/*/erd/*`, `websocket#api` (liste `id: "List-appliances"`, lecture complète
+  `id: "<mac>-allErd"`, écriture `id: "<mac>-setErd-<code>"`, corps `appliance#erdListEntry` avec
+  `userId`), `websocket#ping` toutes les 30 s ; le serveur pousse `publish#erd`. Une réponse
+  `code` 401/403 ou « Access token expired » = rafraîchir le jeton et rouvrir. GE ne documente pas de
+  réponse au ping : une lecture complète sans réponse en 60 s = socket morte.
+- **Node 22 a un client WebSocket intégré** (`globalThis.WebSocket`) : aucune dépendance. Les tests lui
+  substituent une classe factice (`addEventListener`, `send`, `close`, `readyState`).
+- **ERD** : valeurs en hexadécimal gros-boutiste. Type d'appareil 0x0008 (`"02"` lave-linge…), toutes
+  les températures en **°F** sur le fil, même quand l'appareil affiche des °C (Home Assistant le code
+  en dur). Signés sur un octet pour le frigo (0x1004/0x1005 : frigo puis congélateur, 0x80 = absent),
+  `FFFF` = « aucun » pour les durées. Temps restant : **secondes** pour le linge (0x2007), **minutes**
+  pour le lave-vaisselle (0xd004) et le four (0x5104). Portes linge/lave-vaisselle : 0 ouverte, 1 fermée
+  (comme `OPENING_SENSOR_STATE`) ; frigo 0x1016 : `00` fermée, `01` ouverte, `FF` absente, par porte.
+- **Consignes du frigo** : 0x1005 porte les deux compartiments ; on renvoie l'autre octet tel quel.
+  Bornes 0x100b (min/max frigo puis congélateur), sinon celles de Home Assistant (32-46 °F, -6-7 °F).
+- **Climatiseurs** : modes 0x7a01 (0 froid, 1 ventilation, 2 éco, 3 chaud, 4 déshu, 5 auto) ; l'éco
+  sert d'« auto » quand l'appareil n'a pas d'auto (comme Home Assistant). Modes offerts selon 0x7b00
+  (bits chaud 1, déshu 2, éco 4, auto 32), vitesses selon 0x7b0b. Consigne 64-86 °F, ou 0x7b06 (split et
+  mobiles).
+- **Sécurité** (choix de Guilhem, comme Miele et Electrolux) : four, cuisinière, chauffe-eau en lecture
+  seule ; lave-vaisselle : pause (0x3204 = 3) et arrêt (= 2) seulement, si 0x3087 (commande à distance)
+  vaut 1, jamais 1 (départ/reprise) ; linge en lecture seule (gehomesdk n'expose qu'un départ par
+  0x2038, non repris).
+- **Pas de porte de four** ni de distributeur de frigo dans les ERD de gehomesdk.
+
+## Pièges découverts sur le SDK (14/10/2026)
+
+- Le faux Gladys enregistre `fake.transports` **à plat** (`{ device_external_id, transport }`), et l'ack
+  d'une action de scène est `{ data: { outputs } }`, celui d'une action de configuration
+  `{ data: { message } }`.
+- Le `fetch` de Node n'emprunte pas le proxy de la session : la sonde y répond « not reached » (code 2).
