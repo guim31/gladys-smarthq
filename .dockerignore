@@ -8,3 +8,7 @@ data
 *.log
 .DS_Store
 README.md
+probe-data
+scripts
+test
+docs

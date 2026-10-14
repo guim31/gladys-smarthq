@@ -1,177 +1,630 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "GE Appliances (SmartHQ)",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "GE, Café, Monogram, Haier, Hotpoint via SmartHQ: laundry, dishwasher, fridge, air conditioners.",
+    "fr": "GE, Café, Monogram, Haier, Hotpoint via SmartHQ : linge, vaisselle, frigo, climatiseurs.",
+    "de": "GE, Café, Monogram, Haier, Hotpoint über SmartHQ: Wäsche, Geschirr, Kühlschrank, Klimageräte.",
+    "es": "GE, Café, Monogram, Haier, Hotpoint vía SmartHQ: ropa, vajilla, frigorífico, climatizadores."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-smarthq:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-smarthq/main/cover.png",
+  "categories": ["appliances"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Before you start",
+        "fr": "Avant de commencer",
+        "de": "Bevor du anfängst",
+        "es": "Antes de empezar"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "GE appliances have no local API: everything goes through the SmartHQ cloud, with the account of the SmartHQ app (GE, GE Profile, Café, Monogram, Haier, Hotpoint). Fill in its e-mail and password, then save. If the account asks for a verification code, run the action \"Send the verification code\", then \"Enter the verification code\" with the code received. Nothing that heats is ever started remotely. Not affiliated with GE Appliances or Haier.",
+        "fr": "Les appareils GE n'ont pas d'API locale : tout passe par le cloud SmartHQ, avec le compte de l'application SmartHQ (GE, GE Profile, Café, Monogram, Haier, Hotpoint). Renseignez son e-mail et son mot de passe, puis enregistrez. Si le compte demande un code de vérification, lancez l'action « Envoyer le code de vérification », puis « Saisir le code de vérification » avec le code reçu. Rien de ce qui chauffe n'est jamais démarré à distance. Sans lien avec GE Appliances ni Haier.",
+        "de": "GE-Geräte haben keine lokale API: Alles läuft über die SmartHQ-Cloud, mit dem Konto der SmartHQ-App (GE, GE Profile, Café, Monogram, Haier, Hotpoint). Trag die E-Mail-Adresse und das Passwort ein und speichere. Verlangt das Konto einen Bestätigungscode, führe die Aktion „Bestätigungscode senden“ aus, dann „Bestätigungscode eingeben“ mit dem erhaltenen Code. Nichts, was heizt, wird je aus der Ferne gestartet. Keine Verbindung zu GE Appliances oder Haier.",
+        "es": "Los aparatos GE no tienen API local: todo pasa por la nube SmartHQ, con la cuenta de la aplicación SmartHQ (GE, GE Profile, Café, Monogram, Haier, Hotpoint). Indique su correo electrónico y su contraseña y guarde. Si la cuenta pide un código de verificación, ejecute la acción «Enviar el código de verificación» y luego «Introducir el código de verificación» con el código recibido. Nada que caliente se inicia nunca a distancia. Sin relación con GE Appliances ni Haier."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://accounts.brillion.geappliances.com",
+          "label": {
+            "en": "SmartHQ account",
+            "fr": "Compte SmartHQ",
+            "de": "SmartHQ-Konto",
+            "es": "Cuenta SmartHQ"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
+      "key": "username",
+      "type": "string",
       "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "label": {
+        "en": "E-mail",
+        "fr": "E-mail",
+        "de": "E-Mail-Adresse",
+        "es": "Correo electrónico"
+      },
+      "description": {
+        "en": "The e-mail of your SmartHQ account.",
+        "fr": "L’e-mail de votre compte SmartHQ.",
+        "de": "Die E-Mail-Adresse deines SmartHQ-Kontos.",
+        "es": "El correo electrónico de su cuenta SmartHQ."
+      },
+      "placeholder": {
+        "en": "name@example.com",
+        "fr": "nom@exemple.fr",
+        "de": "name@beispiel.de",
+        "es": "nombre@ejemplo.es"
+      }
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
+      "key": "password",
+      "type": "secret",
       "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
+      },
+      "description": {
+        "en": "The password of your SmartHQ account. A refused password is not tried again until you change it.",
+        "fr": "Le mot de passe de votre compte SmartHQ. Un mot de passe refusé n'est pas réessayé tant que vous ne le changez pas.",
+        "de": "Das Passwort deines SmartHQ-Kontos. Ein abgelehntes Passwort wird erst wieder versucht, wenn du es änderst.",
+        "es": "La contraseña de su cuenta SmartHQ. Una contraseña rechazada no se vuelve a intentar hasta que usted la cambie."
+      }
     },
     {
-      "key": "unit",
+      "key": "region",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
       "required": false,
-      "default": "celsius",
+      "default": "US",
+      "label": {
+        "en": "Account region",
+        "fr": "Région du compte",
+        "de": "Region des Kontos",
+        "es": "Región de la cuenta"
+      },
+      "description": {
+        "en": "United States for nearly every account (the SmartHQ app of North America).",
+        "fr": "États-Unis pour presque tous les comptes (l'application SmartHQ d'Amérique du Nord).",
+        "de": "USA für fast alle Konten (die SmartHQ-App für Nordamerika).",
+        "es": "Estados Unidos para casi todas las cuentas (la aplicación SmartHQ de Norteamérica)."
+      },
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "US",
+          "label": {
+            "en": "United States",
+            "fr": "États-Unis",
+            "de": "USA",
+            "es": "Estados Unidos"
+          }
+        },
+        {
+          "value": "EU",
+          "label": {
+            "en": "Europe",
+            "fr": "Europe",
+            "de": "Europa",
+            "es": "Europa"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
-      "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
-      },
+      "key": "temperature_unit",
+      "type": "select",
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "celsius",
+      "label": {
+        "en": "Temperature unit",
+        "fr": "Unité de température",
+        "de": "Temperatureinheit",
+        "es": "Unidad de temperatura"
+      },
+      "description": {
+        "en": "Unit of the temperatures and setpoints of the devices. GE appliances work in °F: values are converted. Change it before adding the devices.",
+        "fr": "Unité des températures et des consignes des appareils. Les appareils GE fonctionnent en °F : les valeurs sont converties. À choisir avant d'ajouter les appareils.",
+        "de": "Einheit der Temperaturen und Sollwerte der Geräte. GE-Geräte arbeiten in °F: Die Werte werden umgerechnet. Wähle sie, bevor du die Geräte hinzufügst.",
+        "es": "Unidad de las temperaturas y consignas de los aparatos. Los aparatos GE funcionan en °F: los valores se convierten. Elíjala antes de añadir los aparatos."
+      },
+      "options": [
+        {
+          "value": "celsius",
+          "label": {
+            "en": "Celsius (°C)",
+            "fr": "Celsius (°C)",
+            "de": "Celsius (°C)",
+            "es": "Celsius (°C)"
+          }
+        },
+        {
+          "value": "fahrenheit",
+          "label": {
+            "en": "Fahrenheit (°F)",
+            "fr": "Fahrenheit (°F)",
+            "de": "Fahrenheit (°F)",
+            "es": "Fahrenheit (°F)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "required": false,
+      "default": "fr",
+      "label": {
+        "en": "Language",
+        "fr": "Langue",
+        "de": "Sprache",
+        "es": "Idioma"
+      },
+      "description": {
+        "en": "Feature names of new devices, states and widget. Washer and dryer cycles keep GE names, in English.",
+        "fr": "Noms des fonctionnalités des nouveaux appareils, états et widget. Les programmes de lavage gardent les noms GE, en anglais.",
+        "de": "Funktionsnamen neuer Geräte, Zustände und Widget. Wasch- und Trockenprogramme behalten die GE-Namen, auf Englisch.",
+        "es": "Nombres de las funciones de los nuevos aparatos, estados y widget. Los programas de lavado conservan los nombres GE, en inglés."
+      },
+      "options": [
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "timeout_seconds": 45
     },
     {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "send_code",
+      "label": {
+        "en": "Send the verification code",
+        "fr": "Envoyer le code de vérification",
+        "de": "Bestätigungscode senden",
+        "es": "Enviar el código de verificación"
+      },
+      "timeout_seconds": 45
+    },
+    {
+      "key": "submit_code",
+      "label": {
+        "en": "Enter the verification code",
+        "fr": "Saisir le code de vérification",
+        "de": "Bestätigungscode eingeben",
+        "es": "Introducir el código de verificación"
+      },
+      "timeout_seconds": 45,
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "key": "code",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Code received",
+            "fr": "Code reçu",
+            "de": "Erhaltener Code",
+            "es": "Código recibido"
+          },
+          "placeholder": {
+            "en": "123456",
+            "fr": "123456",
+            "de": "123456",
+            "es": "123456"
+          }
         }
       ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "cycle_finished",
+      "label": {
+        "en": "GE cycle finished",
+        "fr": "Cycle GE terminé",
+        "de": "GE-Programm beendet",
+        "es": "Ciclo GE terminado"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A washer, dryer or dishwasher finished its cycle, or a timed cook of an oven ran out.",
+        "fr": "Un lave-linge, sèche-linge ou lave-vaisselle a terminé son cycle, ou la cuisson minutée d'un four est finie.",
+        "de": "Eine Waschmaschine, ein Trockner oder Geschirrspüler hat das Programm beendet, oder ein Backofen-Timer ist abgelaufen.",
+        "es": "Una lavadora, secadora o lavavajillas terminó su ciclo, o terminó la cocción programada de un horno."
       },
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Appliance",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Aparato"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "device_name",
+          "type": "string",
+          "label": {
+            "en": "Appliance name",
+            "fr": "Nom de l'appareil",
+            "de": "Gerätename",
+            "es": "Nombre del aparato"
+          }
         },
         {
-          "key": "target",
+          "key": "cycle",
+          "type": "string",
+          "label": {
+            "en": "Cycle",
+            "fr": "Programme",
+            "de": "Programm",
+            "es": "Programa"
+          }
+        }
+      ]
+    },
+    {
+      "key": "appliance_alert",
+      "label": {
+        "en": "GE appliance alert",
+        "fr": "Alerte d'un appareil GE",
+        "de": "Warnung eines GE-Geräts",
+        "es": "Alerta de un aparato GE"
+      },
+      "description": {
+        "en": "An appliance raises a new alert: door left open, leak, filter, rinse aid, blocked vent…",
+        "fr": "Un appareil lève une nouvelle alerte : porte restée ouverte, fuite, filtre, liquide de rinçage, évacuation bouchée…",
+        "de": "Ein Gerät meldet eine neue Warnung: Tür offen, Leck, Filter, Klarspüler, verstopfte Abluft…",
+        "es": "Un aparato emite una nueva alerta: puerta abierta, fuga, filtro, abrillantador, salida obstruida…"
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Appliance",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Aparato"
+          }
+        },
+        {
+          "key": "code",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "Alerts",
+            "fr": "Alertes",
+            "de": "Warnungen",
+            "es": "Alertas"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "drain",
+              "label": {
+                "en": "Drain problem",
+                "fr": "Problème de vidange",
+                "de": "Abpumpproblem",
+                "es": "Problema de desagüe"
+              }
+            },
+            {
+              "value": "vent_blocked",
+              "label": {
+                "en": "Dryer vent blocked",
+                "fr": "Évacuation du sèche-linge bouchée",
+                "de": "Trockner-Abluft verstopft",
+                "es": "Salida de la secadora obstruida"
+              }
+            },
+            {
+              "value": "rinse_aid",
+              "label": {
+                "en": "Rinse aid low",
+                "fr": "Liquide de rinçage bas",
+                "de": "Klarspüler fast leer",
+                "es": "Abrillantador bajo"
+              }
+            },
+            {
+              "value": "clean_filter",
+              "label": {
+                "en": "Dishwasher filter to clean",
+                "fr": "Filtre du lave-vaisselle à nettoyer",
+                "de": "Geschirrspülerfilter reinigen",
+                "es": "Filtro del lavavajillas por limpiar"
+              }
+            },
+            {
+              "value": "water_filter_replace",
+              "label": {
+                "en": "Water filter to order",
+                "fr": "Filtre à eau à commander",
+                "de": "Wasserfilter bestellen",
+                "es": "Filtro de agua por pedir"
+              }
+            },
+            {
+              "value": "water_filter_expired",
+              "label": {
+                "en": "Water filter expired",
+                "fr": "Filtre à eau périmé",
+                "de": "Wasserfilter abgelaufen",
+                "es": "Filtro de agua caducado"
+              }
+            },
+            {
+              "value": "water_leak",
+              "label": {
+                "en": "Water leak",
+                "fr": "Fuite d'eau",
+                "de": "Wasserleck",
+                "es": "Fuga de agua"
+              }
+            },
+            {
+              "value": "fridge_door",
+              "label": {
+                "en": "Fridge door open",
+                "fr": "Porte du réfrigérateur ouverte",
+                "de": "Kühlschranktür offen",
+                "es": "Puerta del frigorífico abierta"
+              }
+            },
+            {
+              "value": "freezer_door",
+              "label": {
+                "en": "Freezer door open",
+                "fr": "Porte du congélateur ouverte",
+                "de": "Gefrierfachtür offen",
+                "es": "Puerta del congelador abierta"
+              }
+            },
+            {
+              "value": "fridge_too_warm",
+              "label": {
+                "en": "Fridge too warm",
+                "fr": "Réfrigérateur trop chaud",
+                "de": "Kühlschrank zu warm",
+                "es": "Frigorífico demasiado caliente"
+              }
+            },
+            {
+              "value": "freezer_too_warm",
+              "label": {
+                "en": "Freezer too warm",
+                "fr": "Congélateur trop chaud",
+                "de": "Gefrierfach zu warm",
+                "es": "Congelador demasiado caliente"
+              }
+            },
+            {
+              "value": "ac_filter",
+              "label": {
+                "en": "Air conditioner filter to clean",
+                "fr": "Filtre du climatiseur à nettoyer",
+                "de": "Filter des Klimageräts reinigen",
+                "es": "Filtro del climatizador por limpiar"
+              }
+            },
+            {
+              "value": "ice_add_water",
+              "label": {
+                "en": "Ice maker: add water",
+                "fr": "Machine à glaçons : ajouter de l'eau",
+                "de": "Eismaschine: Wasser nachfüllen",
+                "es": "Máquina de hielo: añadir agua"
+              }
+            },
+            {
+              "value": "ice_bin_missing",
+              "label": {
+                "en": "Ice maker: bin missing",
+                "fr": "Machine à glaçons : bac absent",
+                "de": "Eismaschine: Behälter fehlt",
+                "es": "Máquina de hielo: falta el depósito"
+              }
+            },
+            {
+              "value": "ice_water_source",
+              "label": {
+                "en": "Ice maker: no water source",
+                "fr": "Machine à glaçons : pas d'arrivée d'eau",
+                "de": "Eismaschine: kein Wasserzulauf",
+                "es": "Máquina de hielo: sin toma de agua"
+              }
+            },
+            {
+              "value": "ice_filter",
+              "label": {
+                "en": "Ice maker filter expired",
+                "fr": "Filtre de la machine à glaçons périmé",
+                "de": "Filter der Eismaschine abgelaufen",
+                "es": "Filtro de la máquina de hielo caducado"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "device_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Appliance name",
+            "fr": "Nom de l'appareil",
+            "de": "Gerätename",
+            "es": "Nombre del aparato"
+          }
+        },
+        {
+          "key": "alert",
+          "type": "string",
+          "label": {
+            "en": "Alert",
+            "fr": "Alerte",
+            "de": "Warnung",
+            "es": "Alerta"
+          }
+        },
+        {
+          "key": "code",
+          "type": "string",
+          "label": {
+            "en": "Alert code",
+            "fr": "Code de l'alerte",
+            "de": "Warncode",
+            "es": "Código de la alerta"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "appliance_command",
+      "label": {
+        "en": "Pause or stop a GE dishwasher",
+        "fr": "Pause ou arrêt d’un lave-vaisselle GE",
+        "de": "GE-Geschirrspüler pausieren/stoppen",
+        "es": "Pausar o detener un lavavajillas GE"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Pause or stop the cycle of a dishwasher whose remote control is enabled. Never starts anything.",
+        "fr": "Met en pause ou arrête le cycle d'un lave-vaisselle à commande à distance activée. Ne démarre jamais rien.",
+        "de": "Pausiert oder stoppt das Programm eines Geschirrspülers mit aktivierter Fernsteuerung. Startet nie etwas.",
+        "es": "Pausa o detiene el ciclo de un lavavajillas con control remoto activado. Nunca inicia nada."
+      },
+      "timeout_seconds": 20,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Appliance",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Aparato"
+          },
           "required": true
+        },
+        {
+          "key": "command",
+          "type": "select",
+          "required": true,
+          "label": {
+            "en": "Command",
+            "fr": "Commande",
+            "de": "Befehl",
+            "es": "Orden"
+          },
+          "options": [
+            {
+              "value": "pause",
+              "label": {
+                "en": "Pause",
+                "fr": "Mettre en pause",
+                "de": "Pausieren",
+                "es": "Pausar"
+              }
+            },
+            {
+              "value": "stop",
+              "label": {
+                "en": "Stop",
+                "fr": "Arrêter",
+                "de": "Stoppen",
+                "es": "Detener"
+              }
+            }
+          ]
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "sent",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Command sent",
+            "fr": "Commande envoyée",
+            "de": "Befehl gesendet",
+            "es": "Orden enviada"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "running_appliances",
+      "label": {
+        "en": "GE appliances",
+        "fr": "Appareils GE",
+        "de": "GE-Geräte",
+        "es": "Aparatos GE"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Appliances running, time left and expected end.",
+        "fr": "Appareils en marche, temps restant et fin prévue.",
+        "de": "Laufende Geräte, Restzeit und voraussichtliches Ende.",
+        "es": "Aparatos en marcha, tiempo restante y fin previsto."
+      },
+      "icon": "clock"
     }
   ]
 }
